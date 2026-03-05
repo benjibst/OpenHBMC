@@ -39,6 +39,7 @@ module hbmc_iobuf #
     input   wire            oddr_clk,
     input   wire            iserdes_clk,
     input   wire            iserdes_clkdiv,
+    input   wire            iserdes_clkdiv_serdes,
     input   wire            idelay_clk,
     
     inout   wire            buf_io,
@@ -53,8 +54,11 @@ module hbmc_iobuf #
     wire            tristate;
     wire            idelay_o;
     wire            iserdes_data_in;
-    wire    [5:0]   iserdes_q;
     wire    [7:0]   iserdes_q_ext;
+    wire            iserdes_fifo_empty;
+    wire            iserdes_fifo_rd_en;
+    reg     [23:0]  iserdes_gear_buf;
+    reg     [4:0]   iserdes_gear_cnt;
     
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
@@ -153,15 +157,15 @@ module hbmc_iobuf #
      * Use a deserialized bit as a low-latency fabric-visible RWDS sample. */
     assign iserdes_comb_o = iserdes_q_ext[0];
     
-    /* Keep the existing 6-bit output interface used by the DRU logic. */
-    assign iserdes_q = iserdes_q_ext[5:0];
+    /* Read one 8-bit ISERDES word whenever FIFO has data available. */
+    assign iserdes_fifo_rd_en = ~iserdes_fifo_empty;
     
     
     ISERDESE3 #
     (
         .DATA_WIDTH         ( 8                         ),  // ISERDESE3 supports DDR widths 4 or 8
         .DDR_CLK_EDGE       ( "OPPOSITE_EDGE"           ),
-        .FIFO_ENABLE        ( "FALSE"                   ),
+        .FIFO_ENABLE        ( "TRUE"                    ),
         .FIFO_SYNC_MODE     ( "FALSE"                   ),
         .IDDR_MODE          ( "FALSE"                   ),
         .IS_CLK_B_INVERTED  ( 1'b1                      ),
@@ -171,27 +175,47 @@ module hbmc_iobuf #
     )
     ISERDESE3_inst
     (
-        .FIFO_EMPTY     ( /*-----NC-----*/  ),
+        .FIFO_EMPTY     ( iserdes_fifo_empty ),
         .INTERNAL_DIVCLK( /*-----NC-----*/  ),
         .Q              ( iserdes_q_ext     ),
         
         .CLK            ( iserdes_clk       ),
-        .CLKDIV         ( iserdes_clkdiv    ),
+        .CLKDIV         ( iserdes_clkdiv_serdes ),
         .CLK_B          ( iserdes_clk       ),
         .D              ( iserdes_data_in   ),
-        .FIFO_RD_CLK    ( 1'b0              ),  // Tie off when FIFO is disabled
-        .FIFO_RD_EN     ( 1'b0              ),  // Tie off when FIFO is disabled
+        .FIFO_RD_CLK    ( iserdes_clkdiv    ),
+        .FIFO_RD_EN     ( iserdes_fifo_rd_en ),
         .RST            ( arst              )
     );
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    /* Register ISERDESE3 output */
-    always @(posedge iserdes_clkdiv or posedge arst) begin
+    /* 8->6 gearbox preserves the original 6-sample interface used by DRU. */
+    always @(posedge iserdes_clkdiv or posedge arst) begin : p_iserdes_gearbox
+        reg [23:0] gear_buf_next;
+        reg [4:0]  gear_cnt_next;
+
         if (arst) begin
-            iserdes_o <= {6{1'b0}};
+            iserdes_o        <= {6{1'b0}};
+            iserdes_gear_buf <= {24{1'b0}};
+            iserdes_gear_cnt <= {5{1'b0}};
         end else begin
-            iserdes_o <= iserdes_q;
+            gear_buf_next = iserdes_gear_buf;
+            gear_cnt_next = iserdes_gear_cnt;
+
+            if (iserdes_fifo_rd_en) begin
+                gear_buf_next = gear_buf_next | ({16'b0, iserdes_q_ext} << gear_cnt_next);
+                gear_cnt_next = gear_cnt_next + 5'd8;
+            end
+
+            if (gear_cnt_next >= 5'd6) begin
+                iserdes_o     <= gear_buf_next[5:0];
+                gear_buf_next = gear_buf_next >> 6;
+                gear_cnt_next = gear_cnt_next - 5'd6;
+            end
+
+            iserdes_gear_buf <= gear_buf_next;
+            iserdes_gear_cnt <= gear_cnt_next;
         end
     end
     

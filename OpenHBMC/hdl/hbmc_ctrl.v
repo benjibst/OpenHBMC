@@ -341,6 +341,27 @@ module hbmc_ctrl #
  
     wire    iserdes_clk_iobuf;
     wire    iserdes_clkdiv;
+    wire    iserdes_clkdiv_serdes;
+
+
+    /* Legacy DRU logic expects 6 samples per clk_hbmc_0 cycle.
+     * With ISERDESE3 DATA_WIDTH=8 on a 3x sampling clock,
+     * ISERDESE3 CLKDIV must run at (3/4) * clk_hbmc_0. */
+    BUFGCE_DIV #
+    (
+        .BUFGCE_DIVIDE   ( 4                          ),
+        .IS_CE_INVERTED  ( 1'b0                       ),
+        .IS_CLR_INVERTED ( 1'b0                       ),
+        .IS_I_INVERTED   ( 1'b0                       ),
+        .SIM_DEVICE      ( "SPARTAN_ULTRASCALE_PLUS" )
+    )
+    BUFGCE_DIV_iserdes_div4
+    (
+        .O   ( iserdes_clkdiv_serdes ),
+        .CE  ( 1'b1                  ),
+        .CLR ( 1'b0                  ),
+        .I   ( clk_iserdes           )
+    );
     
     
     generate
@@ -400,6 +421,7 @@ module hbmc_ctrl #
         .oddr_clk       ( clk_hbmc_0        ),
         .iserdes_clk    ( iserdes_clk_iobuf ),
         .iserdes_clkdiv ( iserdes_clkdiv    ),
+        .iserdes_clkdiv_serdes ( iserdes_clkdiv_serdes ),
         .idelay_clk     ( clk_idelay_ref    ),
         
         .buf_io         ( hb_rwds           ),
@@ -450,6 +472,7 @@ module hbmc_ctrl #
                 .oddr_clk       ( clk_hbmc_0                      ),
                 .iserdes_clk    ( iserdes_clk_iobuf               ),
                 .iserdes_clkdiv ( iserdes_clkdiv                  ),
+                .iserdes_clkdiv_serdes ( iserdes_clkdiv_serdes    ),
                 .idelay_clk     ( clk_idelay_ref                  ),
                 
                 .buf_io         ( hb_dq[i]                        ),
