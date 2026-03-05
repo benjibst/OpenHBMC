@@ -52,9 +52,9 @@ module hbmc_iobuf #
     wire            buf_i;
     wire            tristate;
     wire            idelay_o;
-    wire            iserdes_d;
+    wire            iserdes_data_in;
     wire    [5:0]   iserdes_q;
-    wire            iserdes_ddly;
+    wire    [7:0]   iserdes_q_ext;
     
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
@@ -143,87 +143,53 @@ module hbmc_iobuf #
                 .REGRST         ( 1'b0       )      // 1-bit input: Active-high reset tap-delay input
             );
             
-            assign iserdes_d    = 1'b0;
-            assign iserdes_ddly = idelay_o;
+            assign iserdes_data_in = idelay_o;
             
         end else begin
             /* Bypassing IDELAY primitive */
-            assign iserdes_d    = buf_o;
-            assign iserdes_ddly = 1'b0;
+            assign iserdes_data_in = buf_o;
         end
     endgenerate
 
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    localparam IOBDELAY = (USE_IDELAY_PRIMITIVE)? "BOTH" : "NONE";
+    /* ISERDESE3 has no combinational O port, use the active deserializer data path directly. */
+    assign iserdes_comb_o = iserdes_data_in;
+    
+    /* Keep the existing 6-bit output interface used by the DRU logic. */
+    assign iserdes_q = iserdes_q_ext[5:0];
     
     
-    ISERDESE2 #
+    ISERDESE3 #
     (
-        .SERDES_MODE        ( "MASTER"      ),  // MASTER, SLAVE
-        .INTERFACE_TYPE     ( "NETWORKING"  ),  // MEMORY, MEMORY_DDR3, MEMORY_QDR, NETWORKING, OVERSAMPLE
-        .DATA_RATE          ( "DDR"         ),  // DDR, SDR
-        .DATA_WIDTH         ( 6             ),  // Parallel data width (2-8,10,14)
-        
-        .DYN_CLKDIV_INV_EN  ( "FALSE"       ),  // Enable DYNCLKDIVINVSEL inversion (FALSE, TRUE)
-        .DYN_CLK_INV_EN     ( "FALSE"       ),  // Enable DYNCLKINVSEL inversion (FALSE, TRUE)
-        .OFB_USED           ( "FALSE"       ),  // Select OFB path (FALSE, TRUE)
-        .IOBDELAY           ( IOBDELAY      ),  // NONE, BOTH, IBUF, IFD
-        .NUM_CE             ( 1             ),  // Number of clock enables (1,2)
-        
-        .INIT_Q1            ( 1'b0          ),  // INIT_Q1 - INIT_Q4: Initial value on the Q outputs (0/1)
-        .INIT_Q2            ( 1'b0          ),
-        .INIT_Q3            ( 1'b0          ),
-        .INIT_Q4            ( 1'b0          ),
-        
-        .SRVAL_Q1           ( 1'b0          ),  // SRVAL_Q1 - SRVAL_Q4: Q output values when SR is used (0/1)
-        .SRVAL_Q2           ( 1'b0          ),
-        .SRVAL_Q3           ( 1'b0          ),
-        .SRVAL_Q4           ( 1'b0          )
+        .DATA_WIDTH         ( 8                         ),  // ISERDESE3 supports DDR widths 4 or 8
+        .DDR_CLK_EDGE       ( "OPPOSITE_EDGE"           ),
+        .FIFO_ENABLE        ( "FALSE"                   ),
+        .FIFO_SYNC_MODE     ( "FALSE"                   ),
+        .IDDR_MODE          ( "FALSE"                   ),
+        .IS_CLK_B_INVERTED  ( 1'b1                      ),
+        .IS_CLK_INVERTED    ( 1'b0                      ),
+        .IS_RST_INVERTED    ( 1'b0                      ),
+        .SIM_DEVICE         ( "SPARTAN_ULTRASCALE_PLUS" )
     )
-    ISERDESE2_inst
+    ISERDESE3_inst
     (
-        .O              ( iserdes_comb_o    ),  // 1-bit output: Combinatorial output
+        .FIFO_EMPTY     ( /*-----NC-----*/  ),
+        .INTERNAL_DIVCLK( /*-----NC-----*/  ),
+        .Q              ( iserdes_q_ext     ),
         
-        .Q1             ( iserdes_q[5]      ),  // Q1 - Q8: 1-bit (each) output: Registered data outputs
-        .Q2             ( iserdes_q[4]      ),
-        .Q3             ( iserdes_q[3]      ),
-        .Q4             ( iserdes_q[2]      ),
-        .Q5             ( iserdes_q[1]      ),
-        .Q6             ( iserdes_q[0]      ),
-        .Q7             ( /*-----NC-----*/  ),
-        .Q8             ( /*-----NC-----*/  ),
-        
-        .BITSLIP        ( 1'b0              ),  // 1-bit input: The BITSLIP pin performs a Bitslip operation synchronous to
-        
-        .CE1            ( 1'b1              ),  // CE1, CE2: 1-bit (each) input: Data register clock enable inputs
-        .CE2            ( 1'b1              ),
-        
-        .CLK            (  iserdes_clk      ),  // 1-bit input: High-speed clock
-        .CLKB           ( ~iserdes_clk      ),  // 1-bit input: High-speed secondary clock
-        .CLKDIV         ( iserdes_clkdiv    ),  // 1-bit input: Divided clock
-        .CLKDIVP        ( 1'b0              ),  // 1-bit input: TBD
-        .OCLK           ( 1'b0              ),  // 1-bit input: High speed output clock used when INTERFACE_TYPE="MEMORY"
-        .OCLKB          ( 1'b0              ),  // 1-bit input: High speed negative edge output clock
-        
-        .D              ( iserdes_d         ),  // 1-bit input: Data input
-        .DDLY           ( iserdes_ddly      ),  // 1-bit input: Serial data from IDELAYE2
-        .OFB            ( 1'b0              ),  // 1-bit input: Data feedback from OSERDESE2
-        .RST            ( arst              ),  // 1-bit input: Active high asynchronous reset
-        
-        .DYNCLKDIVSEL   ( 1'b0              ),  // 1-bit input: Dynamic CLKDIV inversion
-        .DYNCLKSEL      ( 1'b0              ),  // 1-bit input: Dynamic CLK/CLKB inversion
-        
-        .SHIFTOUT1      ( /*-----NC-----*/  ),  // SHIFTOUT1-SHIFTOUT2: 1-bit (each) output: Data width expansion output ports
-        .SHIFTOUT2      ( /*-----NC-----*/  ),
-        
-        .SHIFTIN1       ( 1'b0              ),  // SHIFTIN1-SHIFTIN2: 1-bit (each) input: Data width expansion input ports
-        .SHIFTIN2       ( 1'b0              )
+        .CLK            ( iserdes_clk       ),
+        .CLKDIV         ( iserdes_clkdiv    ),
+        .CLK_B          ( iserdes_clk       ),
+        .D              ( iserdes_data_in   ),
+        .FIFO_RD_CLK    ( 1'b0              ),  // Tie off when FIFO is disabled
+        .FIFO_RD_EN     ( 1'b0              ),  // Tie off when FIFO is disabled
+        .RST            ( arst              )
     );
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    /* Register ISERDESE2 output */
+    /* Register ISERDESE3 output */
     always @(posedge iserdes_clkdiv or posedge arst) begin
         if (arst) begin
             iserdes_o <= {6{1'b0}};
