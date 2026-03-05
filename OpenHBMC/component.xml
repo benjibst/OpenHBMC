@@ -2414,6 +2414,7 @@
         <xilinx:family xilinx:lifeCycle="Beta">kintex7</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Beta">artix7l</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Beta">aspartan7</xilinx:family>
+        <xilinx:family xilinx:lifeCycle="Beta">spartanuplus</xilinx:family>
       </xilinx:supportedFamilies>
       <xilinx:taxonomies>
         <xilinx:taxonomy>AXI_Peripheral</xilinx:taxonomy>
