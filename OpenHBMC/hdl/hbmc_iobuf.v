@@ -149,8 +149,9 @@ module hbmc_iobuf #
 
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    /* ISERDESE3 has no combinational O port, use the active deserializer data path directly. */
-    assign iserdes_comb_o = iserdes_data_in;
+    /* ISERDESE3 D input must stay dedicated to IO data path.
+     * Use a deserialized bit as a low-latency fabric-visible RWDS sample. */
+    assign iserdes_comb_o = iserdes_q_ext[0];
     
     /* Keep the existing 6-bit output interface used by the DRU logic. */
     assign iserdes_q = iserdes_q_ext[5:0];
