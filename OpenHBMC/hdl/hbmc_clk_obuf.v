@@ -42,21 +42,19 @@ module hbmc_clk_obuf #
 
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    ODDR #
+    ODDRE1 #
     (
-        .DDR_CLK_EDGE ( "SAME_EDGE" ),  // "OPPOSITE_EDGE" or "SAME_EDGE"
-        .INIT         ( 1'b0        ),  // Initial value of Q: 1'b0 or 1'b1
-        .SRTYPE       ( "ASYNC"     )   // Set/Reset type: "SYNC" or "ASYNC"
+        .IS_C_INVERTED  ( 1'b1                      ),
+        .SIM_DEVICE     ( "SPARTAN_ULTRASCALE_PLUS" ),
+        .SRVAL          ( 1'b0                      )
     )
-    ODDR_ck_p
+    ODDRE1_ck_p
     (
         .Q  ( oddr_clk_p ),     // 1-bit DDR output
-        .C  ( ~clk       ),     // 1-bit clock input
-        .CE ( 1'b1       ),     // 1-bit clock enable input
-        .D1 ( cen        ),     // 1-bit data input (positive edge)
-        .D2 ( 1'b0       ),     // 1-bit data input (negative edge)
-        .R  ( 1'b0       ),     // 1-bit reset
-        .S  ( 1'b0       )      // 1-bit set
+        .C  ( clk        ),     // 1-bit clock input
+        .D1 ( cen        ),     // 1-bit data input 1
+        .D2 ( 1'b0       ),     // 1-bit data input 2
+        .SR ( 1'b0       )      // 1-bit reset
     );
     
     
@@ -73,21 +71,19 @@ module hbmc_clk_obuf #
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    ODDR #
+    ODDRE1 #
     (
-        .DDR_CLK_EDGE ( "SAME_EDGE" ),  // "OPPOSITE_EDGE" or "SAME_EDGE"
-        .INIT         ( 1'b0        ),  // Initial value of Q: 1'b0 or 1'b1
-        .SRTYPE       ( "ASYNC"     )   // Set/Reset type: "SYNC" or "ASYNC"
+        .IS_C_INVERTED  ( 1'b1                      ),
+        .SIM_DEVICE     ( "SPARTAN_ULTRASCALE_PLUS" ),
+        .SRVAL          ( 1'b0                      )
     )
-    ODDR_ck_n
+    ODDRE1_ck_n
     (
         .Q  ( oddr_clk_n ),     // 1-bit DDR output
-        .C  ( ~clk       ),     // 1-bit clock input
-        .CE ( 1'b1       ),     // 1-bit clock enable input
-        .D1 ( ~cen       ),     // 1-bit data input (positive edge)
-        .D2 ( 1'b1       ),     // 1-bit data input (negative edge)
-        .R  ( 1'b0       ),     // 1-bit reset
-        .S  ( 1'b0       )      // 1-bit set
+        .C  ( clk        ),     // 1-bit clock input
+        .D1 ( ~cen       ),     // 1-bit data input 1
+        .D2 ( 1'b1       ),     // 1-bit data input 2
+        .SR ( 1'b0       )      // 1-bit reset
     );
     
     

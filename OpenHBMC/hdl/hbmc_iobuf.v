@@ -74,39 +74,35 @@ module hbmc_iobuf #
 
 /*----------------------------------------------------------------------------------------------------------------------------*/
     
-    ODDR #
+    ODDRE1 #
     (
-        .DDR_CLK_EDGE   ( "OPPOSITE_EDGE" ),    // "OPPOSITE_EDGE" or "SAME_EDGE"
-        .INIT           ( 1'b0            ),    // Initial value of Q: 1'b0 or 1'b1
-        .SRTYPE         ( "ASYNC"         )     // Set/Reset type: "SYNC" or "ASYNC"
+        .IS_C_INVERTED  ( 1'b0                      ),
+        .SIM_DEVICE     ( "SPARTAN_ULTRASCALE_PLUS" ),
+        .SRVAL          ( 1'b0                      )
     )
-    ODDR_buf_i
+    ODDRE1_buf_i
     (
         .Q  ( buf_i     ),  // 1-bit DDR output
         .C  ( oddr_clk  ),  // 1-bit clock input
-        .CE ( 1'b1      ),  // 1-bit clock enable input
-        .D1 ( sdr_i[0]  ),  // 1-bit data input (positive edge)
-        .D2 ( sdr_i[1]  ),  // 1-bit data input (negative edge)
-        .R  ( 1'b0      ),  // 1-bit reset
-        .S  ( 1'b0      )   // 1-bit set
+        .D1 ( sdr_i[0]  ),  // 1-bit data input 1
+        .D2 ( sdr_i[1]  ),  // 1-bit data input 2
+        .SR ( 1'b0      )   // 1-bit reset
     );
     
     
-    ODDR #
+    ODDRE1 #
     (
-        .DDR_CLK_EDGE   ( "OPPOSITE_EDGE" ),    // "OPPOSITE_EDGE" or "SAME_EDGE"
-        .INIT           ( 1'b0            ),    // Initial value of Q: 1'b0 or 1'b1
-        .SRTYPE         ( "ASYNC"         )     // Set/Reset type: "SYNC" or "ASYNC"
+        .IS_C_INVERTED  ( 1'b0                      ),
+        .SIM_DEVICE     ( "SPARTAN_ULTRASCALE_PLUS" ),
+        .SRVAL          ( 1'b0                      )
     )
-    ODDR_buf_t
+    ODDRE1_buf_t
     (
         .Q  ( tristate  ),  // 1-bit DDR output
         .C  ( oddr_clk  ),  // 1-bit clock input
-        .CE ( 1'b1      ),  // 1-bit clock enable input
-        .D1 ( buf_t     ),  // 1-bit data input (positive edge)
-        .D2 ( buf_t     ),  // 1-bit data input (negative edge)
-        .R  ( 1'b0      ),  // 1-bit reset
-        .S  ( 1'b0      )   // 1-bit set
+        .D1 ( buf_t     ),  // 1-bit data input 1
+        .D2 ( buf_t     ),  // 1-bit data input 2
+        .SR ( 1'b0      )   // 1-bit reset
     );
     
 /*----------------------------------------------------------------------------------------------------------------------------*/
